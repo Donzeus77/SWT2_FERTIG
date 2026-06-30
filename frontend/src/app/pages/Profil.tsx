@@ -65,7 +65,6 @@ function LoggedInView({ onLogout }: { onLogout: () => void }) {
       if (res.votedIds) setVotedIds(res.votedIds);
     } catch {}
   };
-  };
 
   const toggleDietary = (d: string) => {
     const cur = preferences.dietary;

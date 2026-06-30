@@ -8,9 +8,12 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Service
 public class MenuService {
@@ -25,26 +28,30 @@ public class MenuService {
     private void init() {
         if (repository != null && repository.count() == 0) {
             LocalDate today = LocalDate.now();
-            repository.save(new MenuItem(
-                    "Pasta Bolognese", "mit Tomatenso\u00dfe und Rinderhack", "hauptgericht",
-                    3.50, 5.00, 7.00,
-                    List.of("Gluten"), List.of(),
-                    new MenuItem.Nutrition(680, 35, 72, 18), "Hauptmensa", today));
-            repository.save(new MenuItem(
-                    "Veganer Salat", "mit Dressing und Croutons", "beilage",
-                    2.80, 4.00, 5.60,
-                    List.of(), List.of("Vegan"),
-                    new MenuItem.Nutrition(320, 12, 28, 14), "Hauptmensa", today));
-            repository.save(new MenuItem(
-                    "Schnitzel mit Pommes", "paniertes Schweineschnitzel", "hauptgericht",
-                    4.20, 5.80, 7.50,
-                    List.of("Gluten", "Ei"), List.of(),
-                    new MenuItem.Nutrition(850, 42, 65, 32), "Mensa S\u00fcd", today));
-            repository.save(new MenuItem(
-                    "Suppe des Tages", "wechselt t\u00e4glich", "beilage",
-                    1.50, 2.50, 3.00,
-                    List.of(), List.of("Vegetarisch"),
-                    new MenuItem.Nutrition(180, 8, 15, 10), "Galerie", today));
+            LocalDate monday = today.with(DayOfWeek.MONDAY);
+            for (int d = 0; d < 5; d++) {
+                LocalDate date = monday.plusDays(d);
+                repository.save(new MenuItem(
+                        "Pasta Bolognese", "mit Tomatenso\u00dfe und Rinderhack", "hauptgericht",
+                        3.50, 5.00, 7.00,
+                        List.of("Gluten"), List.of(),
+                        new MenuItem.Nutrition(680, 35, 72, 18), "Hauptmensa", date));
+                repository.save(new MenuItem(
+                        "Veganer Salat", "mit Dressing und Croutons", "beilage",
+                        2.80, 4.00, 5.60,
+                        List.of(), List.of("Vegan"),
+                        new MenuItem.Nutrition(320, 12, 28, 14), "Hauptmensa", date));
+                repository.save(new MenuItem(
+                        "Schnitzel mit Pommes", "paniertes Schweineschnitzel", "hauptgericht",
+                        4.20, 5.80, 7.50,
+                        List.of("Gluten", "Ei"), List.of(),
+                        new MenuItem.Nutrition(850, 42, 65, 32), "Mensa S\u00fcd", date));
+                repository.save(new MenuItem(
+                        "Suppe des Tages", "wechselt t\u00e4glich", "beilage",
+                        1.50, 2.50, 3.00,
+                        List.of(), List.of("Vegetarisch"),
+                        new MenuItem.Nutrition(180, 8, 15, 10), "Galerie", date));
+            }
         } else {
             items.add(buildItem(nextId.getAndIncrement(), "Pasta Bolognese", "mit Tomatenso\u00dfe und Rinderhack", "hauptgericht", 3.50, 5.00, 7.00, List.of("Gluten"), List.of(), new MenuItem.Nutrition(680, 35, 72, 18), "Hauptmensa"));
             items.add(buildItem(nextId.getAndIncrement(), "Veganer Salat", "mit Dressing und Croutons", "beilage", 2.80, 4.00, 5.60, List.of(), List.of("Vegan"), new MenuItem.Nutrition(320, 12, 28, 14), "Hauptmensa"));
@@ -73,13 +80,20 @@ public class MenuService {
         return items.stream().filter(i -> date.equals(i.getDate())).toList();
     }
 
-    public List<MenuItem> getByWeek(String mondayStr) {
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
+
+    public Map<String, List<MenuItem>> getByWeek(String mondayStr) {
         LocalDate monday = LocalDate.parse(mondayStr);
         LocalDate friday = monday.with(DayOfWeek.FRIDAY);
-        if (repository != null) return repository.findByDateBetween(monday, friday);
-        return items.stream()
-                .filter(i -> !i.getDate().isBefore(monday) && !i.getDate().isAfter(friday))
-                .toList();
+        List<MenuItem> list = repository != null
+                ? repository.findByDateBetween(monday, friday)
+                : items.stream()
+                    .filter(i -> !i.getDate().isBefore(monday) && !i.getDate().isAfter(friday))
+                    .toList();
+        return list.stream().collect(Collectors.groupingBy(
+                i -> i.getDate().format(DATE_FMT),
+                LinkedHashMap::new,
+                Collectors.toList()));
     }
 
     public Optional<MenuItem> getItemById(Long id) {

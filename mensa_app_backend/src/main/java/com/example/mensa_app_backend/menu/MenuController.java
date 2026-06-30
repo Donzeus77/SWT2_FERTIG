@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/menu")
@@ -24,7 +25,7 @@ public class MenuController {
     }
 
     @GetMapping("/week/{monday}")
-    public ResponseEntity<List<MenuItem>> getWeekMenu(@PathVariable String monday) {
+    public ResponseEntity<Map<String, List<MenuItem>>> getWeekMenu(@PathVariable String monday) {
         return ResponseEntity.ok(menuService.getByWeek(monday));
     }
 
