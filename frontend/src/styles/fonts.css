@@ -1,0 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap");
+
+/* Variable Bold — system font installed on device */
+@font-face {
+  font-family: "Variable Bold";
+  src: local("Variable Bold"), local("Variable-Bold"), local("Variable");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
