@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThumbsUp, Trophy, Calendar, Lock } from "lucide-react";
 import { useUser } from "../context/UserContext";
+import { votesApi } from "../lib/api";
 
 const WISH_DISHES = [
   { id: "w1", name: "Veganes Sushi Bowl", category: "Vegan", description: "Bowl mit Sushi-Reis, Avocado, Edamame und Miso-Dressing" },
@@ -21,13 +22,6 @@ const categoryColor: Record<string, string> = {
   Halal: "bg-blue-100 text-blue-700",
 };
 
-function loadVotes(): Record<string, number> {
-  try { return JSON.parse(localStorage.getItem("wishVotes") ?? "{}"); } catch { return {}; }
-}
-function loadVotedIds(): string[] {
-  try { return JSON.parse(localStorage.getItem("votedIds") ?? "[]"); } catch { return []; }
-}
-
 function getNextMonday(): string {
   const d = new Date();
   const day = d.getDay();
@@ -38,17 +32,21 @@ function getNextMonday(): string {
 
 export default function Abstimmung() {
   const { isLoggedIn } = useUser();
-  const [votes, setVotes] = useState(loadVotes);
-  const [votedIds, setVotedIds] = useState(loadVotedIds);
+  const [votes, setVotes] = useState<Record<string, number>>({});
+  const [votedIds, setVotedIds] = useState<string[]>([]);
 
-  const handleVote = (id: string) => {
+  useEffect(() => {
+    votesApi.counts().then(setVotes).catch(() => {});
+    if (isLoggedIn) votesApi.myVotes().then(setVotedIds).catch(() => {});
+  }, [isLoggedIn]);
+
+  const handleVote = async (id: string) => {
     if (!isLoggedIn || votedIds.includes(id)) return;
-    const next = { ...votes, [id]: (votes[id] ?? 0) + 1 };
-    const nextVoted = [...votedIds, id];
-    setVotes(next);
-    setVotedIds(nextVoted);
-    localStorage.setItem("wishVotes", JSON.stringify(next));
-    localStorage.setItem("votedIds", JSON.stringify(nextVoted));
+    try {
+      const res = await votesApi.cast(id);
+      if (res.counts) setVotes(res.counts);
+      if (res.votedIds) setVotedIds(res.votedIds);
+    } catch {}
   };
 
   const totalVotes = Object.values(votes).reduce((s, v) => s + v, 0);
