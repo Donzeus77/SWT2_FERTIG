@@ -20,9 +20,6 @@ public class MealService {
     @Autowired(required = false)
     private MqttConfig.MqttGateway mqttGateway;
 
-    @Autowired(required = false)
-    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
-
     @Value("${mqtt.topic.meals}")
     private String mealsTopic;
 
@@ -70,8 +67,17 @@ public class MealService {
         if (mqttGateway != null) {
             try {
                 List<Meal> all = getAllMeals();
-                String json = objectMapper.writeValueAsString(all);
-                mqttGateway.publish(json, mealsTopic);
+                StringBuilder json = new StringBuilder("[");
+                for (int i = 0; i < all.size(); i++) {
+                    Meal m = all.get(i);
+                    if (i > 0) json.append(",");
+                    json.append("{\"id\":").append(m.getId())
+                        .append(",\"name\":\"").append(m.getName()).append("\"")
+                        .append(",\"category\":\"").append(m.getCategory()).append("\"")
+                        .append(",\"price\":").append(m.getPrice()).append("}");
+                }
+                json.append("]");
+                mqttGateway.publish(json.toString(), mealsTopic);
             } catch (Exception e) {
                 System.err.println("MQTT publish meals error: " + e.getMessage());
             }

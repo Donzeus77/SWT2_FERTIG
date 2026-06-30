@@ -23,9 +23,6 @@ public class OrderService {
     @Value("${mqtt.topic.orders}")
     private String ordersTopic;
 
-    @Autowired(required = false)
-    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
-
     private final List<Order> orders = new ArrayList<>();
     private final AtomicLong nextId = new AtomicLong(1);
 
@@ -81,9 +78,8 @@ public class OrderService {
     private void publishOrder(Order order) {
         if (mqttGateway != null) {
             try {
-                String json = objectMapper != null
-                        ? objectMapper.writeValueAsString(order)
-                        : "{\"id\":" + order.getId() + "}";
+                String json = "{\"id\":" + order.getId()
+                        + ",\"status\":\"" + order.getStatus() + "\"}";
                 mqttGateway.publish(json, ordersTopic);
             } catch (Exception e) {
                 System.err.println("MQTT publish order error: " + e.getMessage());
