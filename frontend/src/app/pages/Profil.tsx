@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LogIn, User, Settings, TrendingUp, ArrowLeft, Eye, EyeOff,
   CheckCircle, Mail, Lock, UserPlus, Bell, ChevronRight, LogOut,
   Star, MapPin, Heart, Package, Clock, ThumbsUp, Leaf,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { useUser, type AuthUser } from "../context/UserContext";
+import { useUser, type RegisterData } from "../context/UserContext";
 import { useOrders } from "../context/OrderContext";
+import { votesApi } from "../lib/api";
 
 type AuthView = "landing" | "login" | "register" | "verify";
 
@@ -38,33 +39,31 @@ const WISH_DISHES = [
   { id: "w8", name: "Köfte mit Bulgur", category: "Halal" },
 ];
 
-function loadVotes(): Record<string, number> {
-  try { return JSON.parse(localStorage.getItem("wishVotes") ?? "{}"); } catch { return {}; }
-}
-function loadVotedIds(): string[] {
-  try { return JSON.parse(localStorage.getItem("votedIds") ?? "[]"); } catch { return []; }
-}
-
 // ── Logged-in view ──────────────────────────────────────────────────────────
 function LoggedInView({ onLogout }: { onLogout: () => void }) {
-  const { authUser, favoriteMensa, setFavoriteMensa, preferences, setPreferences, discountRate } = useUser();
+  const { authUser, favoriteMensa, setFavoriteMensa, preferences, setPreferences } = useUser();
   const { orders, markCollected } = useOrders();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [prefOpen, setPrefOpen] = useState(false);
   const [voteOpen, setVoteOpen] = useState(false);
-  const [votes, setVotes] = useState(loadVotes);
-  const [votedIds, setVotedIds] = useState(loadVotedIds);
+  const [votes, setVotes] = useState<Record<string, number>>({});
+  const [votedIds, setVotedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    votesApi.counts().then(setVotes).catch(() => {});
+    votesApi.myVotes().then(setVotedIds).catch(() => {});
+  }, []);
 
   const initials = ((authUser!.firstName[0] ?? "") + (authUser!.lastName[0] ?? "")).toUpperCase();
 
-  const handleVote = (id: string) => {
+  const handleVote = async (id: string) => {
     if (votedIds.includes(id)) return;
-    const next = { ...votes, [id]: (votes[id] ?? 0) + 1 };
-    const nextVoted = [...votedIds, id];
-    setVotes(next); setVotedIds(nextVoted);
-    localStorage.setItem("wishVotes", JSON.stringify(next));
-    localStorage.setItem("votedIds", JSON.stringify(nextVoted));
+    try {
+      const res = await votesApi.cast(id);
+      if (res.counts) setVotes(res.counts);
+      if (res.votedIds) setVotedIds(res.votedIds);
+    } catch {}
   };
 
   const toggleDietary = (d: string) => {
@@ -350,22 +349,17 @@ export default function Profil() {
     return <LoggedInView onLogout={() => { logout(); setView("landing"); }} />;
   }
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoginError("");
-    if (!loginEmail || !loginPassword) { setLoginError("Bitte alle Felder ausfüllen."); return; }
+    if (!loginEmail || !loginPassword) { setLoginError("Bitte alle Felder ausf\u00fcllen."); return; }
     if (!isValidUniEmail(loginEmail)) { setLoginError("Nur Uni-E-Mail-Adressen erlaubt."); return; }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      login({
-        firstName: "Max", lastName: "Mustermann", email: loginEmail,
-        campus: loginEmail.includes("fh") ? "FH Dortmund" : "TU Dortmund",
-        matrikel: "1234567", type: "student",
-      } as AuthUser);
-    }, 1200);
+    const result = await login(loginEmail, loginPassword);
+    setLoading(false);
+    if (!result.success) setLoginError(result.error || "Login fehlgeschlagen");
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const errs: Record<string, string> = {};
     if (!regFirst.trim()) errs.firstName = "Vorname erforderlich";
     if (!regLast.trim()) errs.lastName = "Nachname erforderlich";
@@ -373,20 +367,20 @@ export default function Profil() {
     else if (!isValidUniEmail(regEmail)) errs.email = "Nur Uni-E-Mail-Adressen erlaubt";
     if (!regMatrikel || !/^\d{7}$/.test(regMatrikel)) errs.matrikel = "7-stellige Matrikelnummer";
     if (!regPassword || regPassword.length < 8) errs.password = "Mindestens 8 Zeichen";
-    if (regPassword !== regConfirm) errs.confirm = "Passwörter stimmen nicht überein";
+    if (regPassword !== regConfirm) errs.confirm = "Passw\u00f6rter stimmen nicht \u00fcberein";
     setRegErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
-    setTimeout(() => { setLoading(false); setView("verify"); }, 1400);
+    const data: RegisterData = {
+      firstName: regFirst, lastName: regLast, email: regEmail,
+      password: regPassword, matrikel: regMatrikel, campus: regCampus,
+    };
+    const result = await register(data);
+    setLoading(false);
+    if (!result.success) setRegErrors({ email: result.error || "Registrierung fehlgeschlagen" });
   };
 
-  const handleVerify = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      login({ firstName: regFirst, lastName: regLast, email: regEmail, campus: regCampus, matrikel: regMatrikel, type: "student" } as AuthUser);
-    }, 1000);
-  };
+  const handleVerify = () => {}; // removed - registration now logs in directly
 
   const inputCls = (err?: string) =>
     `w-full px-3 py-3 border rounded-xl text-sm focus:outline-none focus:border-[#003a70] focus:ring-1 focus:ring-[#003a70] ${err ? "border-red-400" : "border-gray-200"}`;

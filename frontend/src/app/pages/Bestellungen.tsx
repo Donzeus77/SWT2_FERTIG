@@ -163,7 +163,7 @@ export default function Bestellungen() {
   const [selectedPickup, setSelectedPickup] = useState(pickupSlots[0] ?? "12:00");
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
 
-  const handlePay = () => {
+  const handlePay = async () => {
     setStep("processing");
     const code = generateCode();
     const order: Omit<Order, "id" | "createdAt"> = {
@@ -175,12 +175,14 @@ export default function Bestellungen() {
       paymentMethod: selectedPayment === "card" ? "Kredit-/Debitkarte" : "PayPal",
       status: "pending",
     };
-    setTimeout(() => {
-      addOrder(order);
-      setCurrentOrder({ ...order, id: "current", createdAt: new Date().toISOString() });
+    const result = await addOrder(order);
+    if (result) {
+      setCurrentOrder(result);
       clearCart();
       setStep("success");
-    }, 2200);
+    } else {
+      setStep("cart");
+    }
   };
 
   // ── Processing ──────────────────────────────────────────────────────────────

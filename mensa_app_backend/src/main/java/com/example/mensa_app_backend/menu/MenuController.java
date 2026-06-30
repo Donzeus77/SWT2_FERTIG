@@ -1,12 +1,10 @@
 package com.example.mensa_app_backend.menu;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/menu")
@@ -19,8 +17,16 @@ public class MenuController {
     }
 
     @GetMapping
-    public List<MenuItem> getAllMenuItems() {
-        return menuService.getAllItems();
+    public ResponseEntity<List<MenuItem>> getMenu(@RequestParam(required = false) String date) {
+        if (date != null) {
+            return ResponseEntity.ok(menuService.getByDate(date));
+        }
+        return ResponseEntity.ok(menuService.getAllItems());
+    }
+
+    @GetMapping("/week/{monday}")
+    public ResponseEntity<Map<String, List<MenuItem>>> getWeekMenu(@PathVariable String monday) {
+        return ResponseEntity.ok(menuService.getByWeek(monday));
     }
 
     @GetMapping("/{id}")
@@ -28,5 +34,10 @@ public class MenuController {
         return menuService.getItemById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public MenuItem createMenuItem(@RequestBody MenuItem item) {
+        return menuService.addItem(item);
     }
 }

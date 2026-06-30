@@ -1,7 +1,7 @@
-// Central API client — points at the Express backend.
+// Central API client — points at the Spring Boot backend via Vite proxy.
 // Falls back to mock data automatically when the server is unreachable.
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api";
+const BASE = "/api";
 
 function getToken(): string | null {
   return localStorage.getItem("authToken");
