@@ -1,7 +1,6 @@
 package com.example.studentenwerk_simulator.meal;
 
 import com.example.studentenwerk_simulator.config.MqttConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,12 +20,14 @@ public class MealService {
     @Autowired(required = false)
     private MqttConfig.MqttGateway mqttGateway;
 
+    @Autowired(required = false)
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     @Value("${mqtt.topic.meals}")
     private String mealsTopic;
 
     private final List<Meal> meals = new ArrayList<>();
     private final AtomicLong nextId = new AtomicLong(1);
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @PostConstruct
     private void init() {

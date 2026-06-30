@@ -1,13 +1,10 @@
 package com.example.mensa_app_backend.order;
 
 import com.example.mensa_app_backend.config.MqttConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,10 +23,11 @@ public class OrderService {
     @Value("${mqtt.topic.orders}")
     private String ordersTopic;
 
+    @Autowired(required = false)
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     private final List<Order> orders = new ArrayList<>();
     private final AtomicLong nextId = new AtomicLong(1);
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule());
 
     public List<Order> getAllOrders() {
         if (repository != null) return repository.findAll();
@@ -83,7 +81,9 @@ public class OrderService {
     private void publishOrder(Order order) {
         if (mqttGateway != null) {
             try {
-                String json = objectMapper.writeValueAsString(order);
+                String json = objectMapper != null
+                        ? objectMapper.writeValueAsString(order)
+                        : "{\"id\":" + order.getId() + "}";
                 mqttGateway.publish(json, ordersTopic);
             } catch (Exception e) {
                 System.err.println("MQTT publish order error: " + e.getMessage());
