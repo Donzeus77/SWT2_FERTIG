@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -30,5 +31,13 @@ public class OrderController {
     @PostMapping
     public Order createOrder(@RequestBody OrderRequest request) {
         return orderService.createOrder(request);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Order> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String status = body.get("status");
+        return orderService.updateStatus(id, status)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

@@ -1,57 +1,82 @@
 package com.example.mensa_app_backend.profil;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "profil")
 public class Profil {
-    private static int anzahlNutzer = 0;
-    private long id;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true)
     private String email;
+
     private String passwort;
     private String vorname;
     private String nachname;
     private String status;
 
-    // Konstruktor fuer Gaeste
+    protected Profil() {}
+
     public Profil(String email, String passwort, String vorname, String nachname) {
         this.email = email;
-        this.vorname = vorname.substring(0,1).toUpperCase() + vorname.substring(1);;
-        this.nachname = nachname.substring(0,1).toUpperCase() + nachname.substring(1);;
+        this.vorname = Character.toUpperCase(vorname.charAt(0)) + vorname.substring(1);
+        this.nachname = Character.toUpperCase(nachname.charAt(0)) + nachname.substring(1);
         this.passwort = passwort;
-        status = "gast";
-        id = ++anzahlNutzer;
+        this.status = "gast";
     }
 
-    // Konstruktor fuer Studenten und Mitarbeiter
     public Profil(String email, String passwort) {
         this.email = email;
         this.passwort = passwort;
-        status = ermittleStatus(email);
-        id = ++anzahlNutzer;
+        this.status = ermittleStatus(email);
         extrahiereName(email);
     }
 
     public static String ermittleStatus(String email) {
-        if(email.contains("@stud.fh-dortmund.de")) {    // vorname.nachname000@stud.fh-dortmund.de
+        if (email.contains("@stud.fh-dortmund.de")) {
             return "student";
-        } else if(email.contains("@fh-dortmund.de")) {  // vorname.nachname@fh-dortmund.de
+        } else if (email.contains("@fh-dortmund.de")) {
             return "mitarbeiter";
-        } else {                                        // irgendwas@seite.de
+        } else {
             return "gast";
         }
     }
 
     private void extrahiereName(String email) {
-        String[] name = email.split("@")[0].split("\\.");     // vorname.nachname000 -> ["vorname","nachname000"]
-        String vorname = name[0].substring(0,1).toUpperCase() + name[0].substring(1);
-        String nachname = name[1].substring(0,1).toUpperCase() + name[1].substring(1);
-        if(status.equals("student") && nachname.length() >= 3) {
-            nachname = nachname.substring(0, nachname.length()-3);   // nachname000 -> nachname
+        String[] name = email.split("@")[0].split("\\.");
+        String vorname = Character.toUpperCase(name[0].charAt(0)) + name[0].substring(1);
+        String nachname = Character.toUpperCase(name[1].charAt(0)) + name[1].substring(1);
+        if (status.equals("student") && nachname.length() >= 3) {
+            nachname = nachname.substring(0, nachname.length() - 3);
         }
         this.vorname = vorname;
         this.nachname = nachname;
     }
 
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPasswort() { return passwort; }
+    public void setPasswort(String passwort) { this.passwort = passwort; }
+    public String getVorname() { return vorname; }
+    public void setVorname(String vorname) { this.vorname = vorname; }
+    public String getNachname() { return nachname; }
+    public void setNachname(String nachname) { this.nachname = nachname; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
     @Override
     public String toString() {
-        return("Vorname: " + vorname + " Nachname: " + nachname + " Status: " + status.substring(0,1).toUpperCase() + status.substring(1));
+        return "Vorname: " + vorname + " Nachname: " + nachname
+                + " Status: " + Character.toUpperCase(status.charAt(0)) + status.substring(1);
     }
-
 }

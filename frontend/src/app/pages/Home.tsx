@@ -3,15 +3,8 @@ import { Filter, Star, CalendarDays, Calendar } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import MenuCard from "../components/MenuCard";
 import MenuFilters from "../components/MenuFilters";
-import { getMenuByDate, getWeekDates } from "../data/mockMenu";
+import { menuApi, type MenuItem } from "../lib/api";
 import { useUser } from "../context/UserContext";
-
-interface MenuItem {
-  id: string; name: string; description: string; category: string;
-  price: number; allergens: string[]; dietary: string[];
-  nutrition: { calories: number; protein: number; carbs: number; fat: number };
-  available: boolean; location: string;
-}
 
 interface DailyMenu { date: string; items: MenuItem[]; }
 interface FilterOptions { allergens: string[]; dietary: string[]; }
@@ -56,9 +49,26 @@ export default function Home() {
     }
   }, []);
 
+  const [menuData, setMenuData] = useState<Record<string, MenuItem[]>>({});
+  const [loading, setLoading] = useState(false);
+
   const weekDates = getWeekDates(selectedDate);
   const todayStr = new Date().toISOString().split("T")[0];
   const selectedDateStr = selectedDate.toISOString().split("T")[0];
+
+  useEffect(() => {
+    setLoading(true);
+    menuApi.byWeek(weekDates[0])
+      .then((data: Record<string, MenuItem[]>) => setMenuData(data))
+      .catch(() => setMenuData({}))
+      .finally(() => setLoading(false));
+  }, [selectedDate.toDateString()]);
+
+  const getMenuByDate = (dateStr: string): DailyMenu | null => {
+    const items = menuData[dateStr];
+    if (!items || items.length === 0) return null;
+    return { date: dateStr, items };
+  };
 
   const hasActiveFilters = filters.allergens.length > 0 || filters.dietary.length > 0;
 
@@ -302,6 +312,19 @@ export default function Home() {
       />
     </div>
   );
+}
+
+function getWeekDates(referenceDate: Date): string[] {
+  const day = referenceDate.getDay();
+  const monday = new Date(referenceDate);
+  monday.setDate(referenceDate.getDate() - ((day + 6) % 7));
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates.push(d.toISOString().split("T")[0]);
+  }
+  return dates;
 }
 
 function getISOWeek(date: Date): number {
